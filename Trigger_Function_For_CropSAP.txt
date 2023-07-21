@@ -1,0 +1,174 @@
+CREATE OR REPLACE PROCEDURE cropsap_procedure()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+DROP TABLE IF EXISTS cropsap_view;
+
+CREATE TABLE cropsap_view AS Table public.ca_crops_condition;
+    --ALTER TABLE cropsap_view ADD COLUMN geom geometry(Point, 4326);
+	UPDATE cropsap_view SET geom = ST_SetSRID(ST_MakePoint(longitude::double precision, latitude::double precision),4326);
+END;
+$$;
+-----------------------------------------------
+----- Trigger Function for CropSap -----------
+-----------------------------------------------
+
+
+-- CREATE OR REPLACE FUNCTION cropsap_trigger()
+-- RETURNS TRIGGER AS
+-- $$
+-- BEGIN
+--   CALL cropsap_procedure();
+--   RETURN NEW;
+-- END;
+-- $$
+-- LANGUAGE plpgsql;
+
+-----------------------------------------------
+------- Trigger Execution ---------------------
+-----------------------------------------------
+
+-- CREATE TRIGGER trigger_cropsap
+-- AFTER INSERT ON tble
+-- FOR EACH ROW
+-- EXECUTE FUNCTION cropsap_trigger();
+
+
+CREATE OR REPLACE FUNCTION cropsap_trigger()
+RETURNS TRIGGER AS
+$$
+BEGIN
+  CALL cropsap_procedure();
+  RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+
+
+
+CREATE TRIGGER trigger_cropsap
+AFTER INSERT ON public.ca_crops_condition
+FOR EACH ROW
+EXECUTE FUNCTION cropsap_trigger();
+
+---------------------------------------------------------------------------------- Trigger for Multicrop Shapefile ------------------------------------------------------------------------------
+
+	-- Procedure
+	
+CREATE OR REPLACE PROCEDURE "CropSap".cropsap_procedure()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+	-- Create table "CropSap"."cropsap_view" from public.ca_crops_condition table
+
+-- DROP TABLE IF EXISTS "CropSap"."cropsap_view";
+
+-- CREATE TABLE "CropSap"."cropsap_view" AS Table public.ca_crops_condition;
+--     ALTER TABLE "CropSap"."cropsap_view" ADD COLUMN geom geometry(Point, 4326);
+-- 	UPDATE "CropSap"."cropsap_view" SET geom = ST_SetSRID(ST_MakePoint(longitude::double precision, latitude::double precision),4326);
+-- 	ALTER TABLE "CropSap"."cropsap_view" DROP COLUMN longitude;
+-- 	ALTER TABLE "CropSap"."cropsap_view" DROP COLUMN latitude;
+-- 	ALTER TABLE "CropSap"."cropsap_view" DROP COLUMN photograph_1;
+-- 	ALTER TABLE "CropSap"."cropsap_view" DROP COLUMN created_at;
+-- 	ALTER TABLE "CropSap"."cropsap_view" DROP COLUMN photograph_2; 
+-- 	ALTER TABLE "CropSap"."cropsap_view" DROP COLUMN village_census_code; 
+-- 	ALTER TABLE "CropSap"."cropsap_view" DROP COLUMN id; 
+-- 	ALTER TABLE "CropSap"."cropsap_view" DROP COLUMN updated_at; 
+	
+	-- Created Materialized view of Cotton
+	
+	DROP MATERIALIZED VIEW IF EXISTS "CropSap"."Cotton";
+
+	CREATE MATERIALIZED VIEW "CropSap"."Cotton" AS
+	SELECT *
+	FROM public."cropsap_view"
+	WHERE crop_name = 'Cotton' AND observation_date = (select MAX(observation_date) from "CropSap"."cropsap_view") ;
+			-----------------------
+	
+	-- Created Materialized view of Soybean
+	
+	DROP MATERIALIZED VIEW IF EXISTS "CropSap"."Soybean";
+
+	CREATE MATERIALIZED VIEW "CropSap"."Soybean" AS
+	SELECT *
+	FROM public."cropsap_view"
+	WHERE crop_name = 'Soybean' AND observation_date = (select MAX(observation_date) from "CropSap"."cropsap_view") ;
+			-----------------------
+	
+	-- Created Materialized view of Rice_Paddy
+	DROP MATERIALIZED VIEW IF EXISTS "CropSap"."Rice_Paddy";
+
+	CREATE MATERIALIZED VIEW "CropSap"."Rice_Paddy" AS
+	SELECT *
+	FROM public."cropsap_view"
+	WHERE crop_name = 'Rice/ Paddy' AND observation_date = (select MAX(observation_date) from "CropSap"."cropsap_view") ;
+			-----------------------
+	
+	-- Created Materialized view of Maize
+	DROP MATERIALIZED VIEW IF EXISTS "CropSap"."Maize";
+
+	CREATE MATERIALIZED VIEW "CropSap"."Maize" AS
+	SELECT *
+	FROM public."cropsap_view"
+	WHERE crop_name = 'Maize (Makka)' AND observation_date = (select MAX(observation_date) from "CropSap"."cropsap_view") ;
+			-----------------------
+	
+	-- Created Materialized view of Sugarcane
+	
+	DROP MATERIALIZED VIEW IF EXISTS "CropSap"."Sugarcane";
+
+	CREATE MATERIALIZED VIEW "CropSap"."Sugarcane" AS
+	SELECT *
+	FROM public."cropsap_view"
+	WHERE crop_name = 'Sugarcane' AND observation_date = (select MAX(observation_date) from "CropSap"."cropsap_view") ;
+			-----------------------
+	
+	-- Created Materialized view of Sorghum
+	DROP MATERIALIZED VIEW IF EXISTS "CropSap"."Sorghum";
+
+	CREATE MATERIALIZED VIEW "CropSap"."Sorghum" AS
+	SELECT *
+	FROM public."cropsap_view"
+	WHERE crop_name = 'Sorghum (Jowar/Great Millet)' AND observation_date = (select MAX(observation_date) from "CropSap"."cropsap_view") ;
+			-----------------------
+	
+	-- Created Materialized view of Gram_Chickpea_Bengal_gram
+	DROP MATERIALIZED VIEW IF EXISTS "CropSap"."Gram_Chickpea_Bengal_gram";
+
+	CREATE MATERIALIZED VIEW "CropSap"."Gram_Chickpea_Bengal_gram" AS
+	SELECT *
+	FROM public."cropsap_view"
+	WHERE crop_name = 'Gram / Chickpea / Bengal gram' AND observation_date = (select MAX(observation_date) from "CropSap"."cropsap_view") ;
+			-----------------------
+END;
+$$;
+
+
+--------------------------------------------- Trigger Function --------------------------------------------------
+
+
+CREATE OR REPLACE FUNCTION "CropSap".cropsap_trigger()
+RETURNS TRIGGER AS
+$$
+BEGIN
+  CALL "CropSap".cropsap_procedure();
+  RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+
+---------------------------------------------- Trigger Created ---------------------------------------------------
+
+
+CREATE TRIGGER trigger_cropsap
+-- Trigger Runing on public.ca_crops_condition
+AFTER INSERT ON public.ca_crops_condition
+FOR EACH ROW
+EXECUTE FUNCTION "CropSap".cropsap_trigger();
+
+
+---------------------------------------------------------------------------------- Trigger for Multicrop Shapefile ------------------------------------------------------------------------------
