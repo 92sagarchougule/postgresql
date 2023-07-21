@@ -1,0 +1,44 @@
+WITH class_table AS (
+         SELECT round((range_table.rainfall_min + range_table.rain_range)::numeric, 2) AS rain_class1,
+            round((range_table.rainfall_min + range_table.rain_range * 2::double precision)::numeric, 2) AS rain_class2,
+            round((range_table.rainfall_min + range_table.rain_range * 3::double precision)::numeric, 2) AS rain_class3
+           FROM ( SELECT (max(imd_1.rainfall_mm::double precision) - min(imd_1.rainfall_mm::double precision)) / 4::double precision AS rain_range,
+                    min(imd_1.rainfall_mm::double precision) AS rainfall_min
+                   FROM weather."IMD_Forecast" imd_1
+                     JOIN pocra_dashboard."Taluka" tal_1 ON tal_1.imd_block_id::text = imd_1.block_id::text
+                  WHERE imd_1.today::text = (( SELECT max("IMD_Forecast".today::text) AS max
+                           FROM weather."IMD_Forecast")) AND imd_1.forecast_date::text = '2023-05-25'::character varying::text) range_table,
+            weather."IMD_Forecast" imd_table
+          WHERE imd_table.today::text = (( SELECT max("IMD_Forecast".today::text) AS max
+                   FROM weather."IMD_Forecast")) AND imd_table.forecast_date::text = '2023-05-25'::character varying::text
+          GROUP BY (round((range_table.rainfall_min + range_table.rain_range)::numeric, 2)), (round((range_table.rainfall_min + range_table.rain_range * 2::double precision)::numeric, 2)), (round((range_table.rainfall_min + range_table.rain_range * 3::double precision)::numeric, 2))
+        )
+ SELECT tal.dtncode,
+    tal.thncode,
+    tal.dtnname,
+    tal.thnname,
+    tal.thmname,
+    imd.today::date AS today,
+    imd.forecast_date::date AS forecast_date,
+    imd.block_id,
+    imd.rainfall_mm::double precision AS rainfall_mm,
+        CASE
+            WHEN imd.rainfall_mm::double precision <= (( SELECT class_table.rain_class1
+               FROM class_table))::double precision THEN 1
+            WHEN imd.rainfall_mm::double precision > (( SELECT class_table.rain_class1
+               FROM class_table))::double precision AND imd.rainfall_mm::double precision <= (( SELECT class_table.rain_class2
+               FROM class_table))::double precision THEN 2
+            WHEN imd.rainfall_mm::double precision > (( SELECT class_table.rain_class2
+               FROM class_table))::double precision AND imd.rainfall_mm::double precision <= (( SELECT class_table.rain_class3
+               FROM class_table))::double precision THEN 3
+            WHEN imd.rainfall_mm::double precision > (( SELECT class_table.rain_class3
+               FROM class_table))::double precision THEN 4
+            ELSE NULL::integer
+        END AS rainfall_class,
+    now() AS created_at,
+    tal.geom
+   FROM pocra_dashboard."Taluka" tal
+     LEFT JOIN weather."IMD_Forecast" imd ON tal.imd_block_id::text = imd.block_id::text
+  WHERE imd.today::text = (( SELECT max("IMD_Forecast".today::text) AS max
+           FROM weather."IMD_Forecast")) AND imd.forecast_date::text = '2023-05-25'::character varying::text
+  ORDER BY tal.dtncode

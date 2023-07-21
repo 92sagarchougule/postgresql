@@ -1,0 +1,33 @@
+	
+SELECT forecast_date, state_id, state_name, district_id, district_name, block_id, block_name
+	FROM public.forecast_blockfcst
+	LIMIT 1;
+
+BEGIN;
+
+UPDATE taluka_weather
+SET block_id = forecast_table.block_id
+FROM (
+	SELECT forc.block_id, tal.tah_code
+	FROM forecast_blockfcst forc
+		INNER JOIN ut_taluk tal
+		ON LOWER(forc.district_name) = LOWER(tal.dist_name)
+			AND	LOWER(forc.block_name) = LOWER(tal.tah_name)
+	WHERE forc.forecast_date = '2023-05-27'
+	) forecast_table
+WHERE taluka_weather.th_code::INT = forecast_table.tah_code::INT
+
+ROLLBACK;
+COMMIT;
+
+
+
+
+SELECT t1.id, t1.forecast_date, t1.state_id, t1.state_name, t1.district_id, t1.district_name, t1.block_id, t1.block_name,t1., t2.geom
+FROM forecast_blockfcst t1, ut_taluk t2 WHERE LOWER(t1.block_name) = LOWER(t2.tah_name) AND  LOWER(t1.district_name) = LOWER(t2.dist_name) AND t1.forecast_date = '2023-05-27';
+
+SELECT t1.id, t1.forecast_date, t1.state_id, t1.state_name, t1.district_id, t1.district_name, t1.block_id, t1.block_name,t1.rainfall, t1.humidity, t1.humidity2, t1.temperature_max, t1.temperature_min, t1.wind_speed, t1.wind_direction, t1.cloud_cover, t1.created_at, t1.updated_at, t2.geom
+FROM forecast_blockfcst t1, ut_taluk t2 WHERE LOWER(t1.block_name) = LOWER(t2.tah_name) AND  LOWER(t1.district_name) = LOWER(t2.dist_name) AND t1.forecast_date = '2023-05-27';
+
+
+todaysforecast
