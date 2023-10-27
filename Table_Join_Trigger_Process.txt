@@ -1,0 +1,61 @@
+--Procedure for CropSap data
+CREATE OR REPLACE PROCEDURE cropsap_procedure()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+DROP TABLE IF EXISTS public.cropsap_view;
+
+CREATE TABLE public.cropsap_view AS 
+
+-- SELECT * FROM public.ca_crops_condition;
+
+
+	-- Tabale Joining 
+	SELECT public.ca_crops_condition.farm_unique_code, public.ca_crops_condition.survey_code, public.ca_crops_condition.district, public.ca_crops_condition.taluka, public.ca_crops_condition.village_name, public.ca_crops_condition.village_census_code, public.ca_crops_condition.latitude, 
+	public.ca_crops_condition.longitude, public.ca_crops_condition.area, public.ca_crops_condition.farmer_name, public.ca_crops_condition.seven_twelve, public.ca_crops_condition.crop_season, public.ca_crops_condition.crop_name, public.ca_crops_condition.crop_variety, public.ca_crops_condition.crop_spacing, 
+	public.ca_crops_condition.sowing_date, public.ca_crops_condition.crop_growth_stage, 
+	public.ca_crops_condition.crop_condition, public.ca_crops_condition.observation_date, public.ca_crops_condition.soil_type, public.ca_crops_condition.irrigated_rainfed, public.ca_crops_condition.created_at, public.ca_crops_condition.updated_at, 
+	public.ca_crops_condition.farmer_name_regional, public.ca_crops_condition.khata_no, public.ca_crops_condition.season_code, public.ca_crops_condition.crop_state, public.ca_crops_condition.affected_area, public.ca_crops_condition.irrigation, 
+	public.ca_crops_condition.district_name_regional, public.ca_crops_condition.taluka_name_regional, public.ca_crops_condition.village_name_regional, public.ca_crops_condition.crop_growth_stage_regional, public.ca_crops_condition.soil_code, public.ca_crops_condition.soil_type_regional, 
+	public.ca_crops_condition.crop_name_regional, public.ca_crops_condition.season_name_regional, public.ca_encoded_files_crops.file_id, public.ca_encoded_files_crops.file_data
+	FROM public.ca_crops_condition
+	LEFT JOIN public.ca_encoded_files_crops
+	ON public.ca_crops_condition.id = public.ca_encoded_files_crops.file_id;
+
+	--Table Converted as GeoSpatial Data
+    ALTER TABLE public.cropsap_view ADD COLUMN geom geometry(Point, 4326);
+	UPDATE public.cropsap_view SET geom = ST_SetSRID(ST_MakePoint(longitude::double precision, latitude::double precision),4326);
+	
+	-- Deleted recent not needable columns
+	ALTER TABLE public.cropsap_view DROP COLUMN longitude;
+	ALTER TABLE public.cropsap_view DROP COLUMN latitude;
+	ALTER TABLE public.cropsap_view DROP COLUMN photograph_1;
+	ALTER TABLE public.cropsap_view DROP COLUMN created_at;
+	ALTER TABLE public.cropsap_view DROP COLUMN photograph_2; 
+	ALTER TABLE public.cropsap_view DROP COLUMN village_census_code; 
+	ALTER TABLE public.cropsap_view DROP COLUMN id; 
+	ALTER TABLE public.cropsap_view DROP COLUMN updated_at;
+	
+END;
+$$;
+
+
+--Trigger for Written Procedure
+CREATE OR REPLACE FUNCTION cropsap_trigger()
+RETURNS TRIGGER AS
+$$
+BEGIN
+  CALL cropsap_procedure();
+  RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+
+--Trigger Exucution after data insert in cropsap table
+CREATE TRIGGER trigger_cropsap
+AFTER INSERT ON public.ca_crops_condition
+FOR EACH ROW
+EXECUTE FUNCTION cropsap_trigger();
+
