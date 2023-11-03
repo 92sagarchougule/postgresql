@@ -1,0 +1,42 @@
+--Procedure for CropSap data
+CREATE OR REPLACE PROCEDURE etl_cropsap()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+DROP TABLE IF EXISTS public."cropsap_etl_view";
+
+CREATE TABLE public."cropsap_etl_view" AS 
+
+	SELECT id, district_code, district_name, district_name_regional, taluka_code, taluka_name, taluka_name_regional, village_code, village_name, 
+	village_name_regional, inspection_for, inspection_date, farm_latitude, farm_longitude, sown_area, pest_field_1, pest_val_1, pest_field_2, 
+	pest_val_2, pest_field_3, pest_val_3, pest_field_4, pest_val_4, pest_field_5, pest_val_5, pest_field_6, pest_val_6, pest_field_7, pest_val_7, 
+	pest_field_8, pest_val_8, pest_field_9, pest_val_9, pest_field_10, pest_val_10, survey_latitude, survey_longitude, cron_exc_date
+	FROM public."cropsap_etl_data";
+
+	--Table Converted as GeoSpatial Data
+    ALTER TABLE public."cropsap_etl_view" ADD COLUMN geom geometry(Point, 4326);
+	UPDATE public."cropsap_etl_view" SET geom = ST_SetSRID(ST_MakePoint(survey_longitude::double precision, survey_latitude::double precision),4326);
+	
+END;
+$$;
+
+
+--Trigger for Written Procedure
+CREATE OR REPLACE FUNCTION cropsap_trigger_etl()
+RETURNS TRIGGER AS
+$$
+BEGIN
+  CALL etl_cropsap();
+  RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+
+--Trigger Exucution after data insert in cropsap table
+CREATE TRIGGER trigger_cropsap_etl
+AFTER INSERT ON public."cropsap_etl_data"
+FOR EACH ROW
+EXECUTE FUNCTION cropsap_trigger_etl();
+
